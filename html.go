@@ -60,11 +60,9 @@ func findId(r io.ReadSeeker) string {
 	return ""
 }
 
-func replace(doc, newContent io.Reader, id string, w io.Writer, c bool) {
+func replace(doc, newContent io.Reader, id string, w io.Writer,
+	replaceChild bool) {
 	z := html.NewTokenizer(doc)
-	emitToken := func(t html.Token) {
-		fmt.Fprint(w, t)
-	}
 outer:
 	for {
 		tt := z.Next()
@@ -75,8 +73,8 @@ outer:
 		case html.StartTagToken:
 			for _, attr := range tok.Attr {
 				if attr.Key == "id" && attr.Val == id {
-					if c {
-						emitToken(tok)
+					if replaceChild {
+						fmt.Fprint(w, tok)
 						z.Next()
 						skip(z)
 						io.Copy(w, newContent)
@@ -90,8 +88,7 @@ outer:
 				}
 			}
 		}
-		emitToken(tok)
-
+		fmt.Fprint(w, tok)
 		if z.Err() == io.EOF {
 			break
 		}
