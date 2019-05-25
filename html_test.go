@@ -54,6 +54,7 @@ Hello, <em id="who">World</em>!
 		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, false},
 		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, true},
 		{"", `<em>github</em>`, `<em id="who">World</em>`, true, true},
+		{"", `<em id="who">github</em>`, `<em id="who">World</em>`, false, false},
 	}
 	for _, c := range cases {
 		wd, _ := workdir.TempDir()
