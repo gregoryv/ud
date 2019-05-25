@@ -17,6 +17,7 @@ func Replace(r io.ReadSeeker, id, file string, inplace, replaceChild bool) (err 
 	}
 	if id == "" {
 		id = findId(r)
+		replaceChild = false // cannot be used when id is not given
 	}
 	if id == "" {
 		return fmt.Errorf("No id specified")

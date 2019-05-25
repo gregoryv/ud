@@ -51,7 +51,8 @@ Hello, <em id="who">World</em>!
 		replaceChild bool
 	}{
 		{"a", "aaa", "aaa", true, true},
-		{"", `<em id="who">github</em>`, `<em id="who">github</em>`, true, true},
+		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, false},
+		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, true},
 		{"", `<em>github</em>`, `<em id="who">World</em>`, true, true},
 	}
 	for _, c := range cases {
