@@ -32,13 +32,14 @@ func Replace(r io.ReadSeeker, id, file string,
 
 // Used to create temporary files for writing inplace
 var TempFile = ioutil.TempFile
+var DefaultOutput io.WriteCloser = os.Stdout
 
 // getOutput returns writer, caller must call Close when done.
 func getOutput(inplace bool, file string) (io.WriteCloser, error) {
 	if inplace {
 		return NewInplaceWriter(file, TempFile)
 	}
-	return os.Stdout, nil
+	return DefaultOutput, nil
 }
 
 type InplaceWriter struct {

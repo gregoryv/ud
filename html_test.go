@@ -58,6 +58,8 @@ func TestReplace(t *testing.T) {
 Hello, <em id="who">World</em>!
 </span></body></html>`
 
+	DefaultOutput = &discard{}
+
 	file := "index.html"
 	cases := []struct {
 		id           string
@@ -132,3 +134,9 @@ func TestNewInplaceWriter(t *testing.T) {
 		w.Close()
 	}
 }
+
+type discard struct{}
+
+func (discard) Close() error { return nil }
+
+func (discard) Write(b []byte) (int, error) { return len(b), nil }
