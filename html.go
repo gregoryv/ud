@@ -10,12 +10,17 @@ import (
 	"golang.org/x/net/html"
 )
 
-func Replace(r io.Reader, id, file string, inplace, replaceChild bool) (err error) {
+func Replace(r io.ReadSeeker, id, file string, inplace, replaceChild bool) (err error) {
 	fh, err := os.Open(file)
 	if err != nil {
 		return
 	}
-
+	if id == "" {
+		id = findId(r)
+	}
+	if id == "" {
+		return fmt.Errorf("No id specified")
+	}
 	if !inplace {
 		replace(fh, id, r, os.Stdout, replaceChild)
 		return
@@ -27,6 +32,30 @@ func Replace(r io.Reader, id, file string, inplace, replaceChild bool) (err erro
 	replace(fh, id, r, out, replaceChild)
 	out.Close()
 	return os.Rename(out.Name(), file)
+}
+
+func findId(r io.ReadSeeker) string {
+	defer r.Seek(0, 0)
+	z := html.NewTokenizer(r)
+	for {
+		tt := z.Next()
+		tok := z.Token()
+		switch tt {
+		case html.ErrorToken:
+			break
+		case html.StartTagToken:
+			for _, attr := range tok.Attr {
+				if attr.Key == "id" {
+					return attr.Val
+				}
+			}
+		}
+
+		if z.Err() == io.EOF {
+			break
+		}
+	}
+	return ""
 }
 
 func replace(doc io.Reader, id string, newContent io.Reader, w io.Writer, c bool) {
