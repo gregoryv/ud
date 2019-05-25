@@ -23,14 +23,14 @@ func Replace(r io.ReadSeeker, id, file string, inplace, replaceChild bool) (err 
 		return fmt.Errorf("No id specified")
 	}
 	if !inplace {
-		replace(fh, id, r, os.Stdout, replaceChild)
+		replace(fh, r, id, os.Stdout, replaceChild)
 		return
 	}
 	out, err := ioutil.TempFile("", path.Base(file))
 	if err != nil {
 		return
 	}
-	replace(fh, id, r, out, replaceChild)
+	replace(fh, r, id, out, replaceChild)
 	out.Close()
 	return os.Rename(out.Name(), file)
 }
@@ -59,7 +59,7 @@ func findId(r io.ReadSeeker) string {
 	return ""
 }
 
-func replace(doc io.Reader, id string, newContent io.Reader, w io.Writer, c bool) {
+func replace(doc, newContent io.Reader, id string, w io.Writer, c bool) {
 	z := html.NewTokenizer(doc)
 	emitToken := func(t html.Token) {
 		fmt.Fprint(w, t)

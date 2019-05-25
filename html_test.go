@@ -1,7 +1,6 @@
 package ud
 
 import (
-	"bytes"
 	"io/ioutil"
 	"strings"
 	"testing"
@@ -67,26 +66,4 @@ Hello, <em id="who">World</em>!
 		assert().Contains(got, "</body></html>")
 		wd.RemoveAll()
 	}
-}
-
-func TestTraverse(t *testing.T) {
-	content := `<html><head><title></title></head>
-<body><span id="a">hepp</span></body></html>`
-
-	doc := strings.NewReader(content)
-	buf := bytes.NewBufferString("")
-	replace(doc, "a", strings.NewReader("hello"), buf, false)
-	assert := asserter.New(t)
-	got := buf.String()
-	assert().Contains(got, "hello")
-	if strings.Index(got, "span") != -1 {
-		t.Error("found span")
-	}
-
-	buf = bytes.NewBufferString("")
-	doc = strings.NewReader(content)
-	replace(doc, "a", strings.NewReader("hello"), buf, true)
-	got = buf.String()
-	assert().Contains(got, "hello</span>")
-
 }
