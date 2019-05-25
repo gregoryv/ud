@@ -19,19 +19,32 @@ func TestReplace_errors(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	wd, _ := workdir.TempDir()
 	content := `<html><head><title></title></head>
 <body><span id="a">
 Hello, <em id="who">World</em>!
 </span></body></html>`
-	defer wd.RemoveAll()
-	wd.WriteFile("index.html", []byte(content))
-	stdin := strings.NewReader("aaa")
-	err := Replace(stdin, "a", wd.Join("index.html"), true, true)
-	assert := asserter.New(t)
-	assert(err == nil).Fatal(err)
-	got, _ := ioutil.ReadFile(wd.Join("index.html"))
-	assert().Contains(got, "aaa")
+
+	file := "index.html"
+	cases := []struct {
+		id           string
+		with         string
+		inplace      bool
+		replaceChild bool
+	}{
+		{"a", "aaa", true, true},
+	}
+	for _, c := range cases {
+		wd, _ := workdir.TempDir()
+		wd.WriteFile(file, []byte(content))
+		stdin := strings.NewReader(c.with)
+		err := Replace(stdin, c.id, wd.Join(file), c.inplace, c.replaceChild)
+		assert := asserter.New(t)
+		assert(err == nil).Error(err)
+		got, _ := ioutil.ReadFile(wd.Join("index.html"))
+		assert().Contains(got, c.with)
+		assert().Contains(got, "</body></html>")
+		wd.RemoveAll()
+	}
 }
 
 func TestTraverse(t *testing.T) {
