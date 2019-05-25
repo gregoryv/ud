@@ -5,17 +5,12 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 
 	"golang.org/x/net/html"
 )
 
 func Replace(r io.ReadSeeker, id, file string,
 	inplace, replaceChild bool) (err error) {
-	fh, err := os.Open(file)
-	if err != nil {
-		return
-	}
 	if id == "" {
 		id = findId(r)
 		replaceChild = false // cannot be used when id is not given
@@ -23,76 +18,90 @@ func Replace(r io.ReadSeeker, id, file string,
 	if id == "" {
 		return fmt.Errorf("No id specified")
 	}
-	if !inplace {
-		replace(fh, r, id, os.Stdout, replaceChild)
+	fh, err := os.Open(file)
+	if err != nil {
 		return
 	}
-	out, err := ioutil.TempFile("", path.Base(file))
+	out, err := getOutput(inplace, file)
 	if err != nil {
 		return
 	}
 	replace(fh, r, id, out, replaceChild)
-	out.Close()
-	return os.Rename(out.Name(), file)
+	return out.Close()
+}
+
+// getOutput returns writer, caller must call Close when done.
+func getOutput(inplace bool, file string) (io.WriteCloser, error) {
+	if inplace {
+		return NewInplaceWriter(file)
+	}
+	return os.Stdout, nil
+}
+
+type InplaceWriter struct {
+	tmp  *os.File
+	dest string
+}
+
+func NewInplaceWriter(file string) (*InplaceWriter, error) {
+	tmp, err := ioutil.TempFile("", "ud")
+	if err != nil {
+		return nil, err
+	}
+	return &InplaceWriter{tmp, file}, nil
+}
+
+func (w *InplaceWriter) Write(b []byte) (int, error) {
+	return w.tmp.Write(b)
+}
+
+func (w *InplaceWriter) Close() error {
+	w.tmp.Close()
+	return os.Rename(w.tmp.Name(), w.dest)
 }
 
 func findId(r io.ReadSeeker) string {
 	defer r.Seek(0, 0)
 	z := html.NewTokenizer(r)
-	for {
-		tt := z.Next()
+	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
-		switch tt {
-		case html.ErrorToken:
-			break
-		case html.StartTagToken:
-			for _, attr := range tok.Attr {
-				if attr.Key == "id" {
-					return attr.Val
-				}
+		for _, attr := range tok.Attr {
+			if attr.Key == "id" {
+				return attr.Val
 			}
-		}
-
-		if z.Err() == io.EOF {
-			break
 		}
 	}
 	return ""
 }
 
-func replace(doc, newContent io.Reader, id string, w io.Writer,
+func replace(doc, r io.Reader, id string, w io.Writer,
 	replaceChild bool) {
 	z := html.NewTokenizer(doc)
 outer:
-	for {
-		tt := z.Next()
+	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
-		switch tt {
-		case html.ErrorToken:
-			break
-		case html.StartTagToken:
-			for _, attr := range tok.Attr {
-				if attr.Key == "id" && attr.Val == id {
-					if replaceChild {
-						fmt.Fprint(w, tok)
-						z.Next()
-						skip(z)
-						io.Copy(w, newContent)
-						fmt.Fprint(w, "</", tok.Data, ">")
-					} else {
-						skip(z)
-						io.Copy(w, newContent)
-					}
-
-					continue outer
+		for _, attr := range tok.Attr {
+			if idMatch(id, attr) {
+				if replaceChild {
+					fmt.Fprint(w, tok)
+					z.Next()
+					skip(z)
+					io.Copy(w, r)
+					fmt.Fprint(w, "</", tok.Data, ">")
+				} else {
+					skip(z)
+					io.Copy(w, r)
 				}
+
+				continue outer
 			}
 		}
 		fmt.Fprint(w, tok)
-		if z.Err() == io.EOF {
-			break
-		}
 	}
+}
+
+func idMatch(id string, attr html.Attribute) bool {
+	return attr.Key == "id" && attr.Val == id
 }
 
 func skip(z *html.Tokenizer) {
