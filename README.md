@@ -8,8 +8,8 @@ Small utility for replacing elements by id within html documents.
 
 Replace an element by id
 
-    echo "<em>new thing</em>" | ud -w -i "someid" -f index.html
+    echo "<em>new thing</em>" | ud -w -i "someid" -html index.html
 
 Replace content of element by id use the `-c` flag
 
-    echo "<em>new thing</em>" | ud -w -c -i "someid" -f index.html
+    echo "<em>new thing</em>" | ud -w -c -i "someid" -html index.html
