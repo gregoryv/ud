@@ -1,6 +1,6 @@
 ud - Update document
 
-Small utility for replacing elements by id within html documents.
+Utility for replacing elements by id within html files.
 
 ## Quick start
 
@@ -20,3 +20,11 @@ replace the identified element.
 Replace content of element by id use the `-c` flag
 
     echo "<em>new thing</em>" | ud -w -c -i "someid" -html index.html
+
+
+## Primary usecase
+
+The primary reason for this tool was to simply generate and update
+image maps within html when working with graphviz documents
+
+    dot -Tcmapx somegraph.dot | ud -w -html index.html
