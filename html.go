@@ -10,7 +10,8 @@ import (
 	"golang.org/x/net/html"
 )
 
-func Replace(r io.ReadSeeker, id, file string, inplace, replaceChild bool) (err error) {
+func Replace(r io.ReadSeeker, id, file string,
+	inplace, replaceChild bool) (err error) {
 	fh, err := os.Open(file)
 	if err != nil {
 		return

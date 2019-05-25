@@ -49,11 +49,41 @@ Hello, <em id="who">World</em>!
 		inplace      bool
 		replaceChild bool
 	}{
-		{"a", "aaa", "aaa", true, true},
-		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, false},
-		{"", `<em id="who">github</em>`, `Hello, <em id="who">github</em>`, true, true},
-		{"", `<em>github</em>`, `<em id="who">World</em>`, true, true},
-		{"", `<em id="who">github</em>`, `<em id="who">World</em>`, false, false},
+		{
+			id:           "a",
+			with:         "aaa",
+			exp:          "aaa",
+			inplace:      true,
+			replaceChild: true,
+		},
+		{
+			id:           "",
+			with:         `<em id="who">github</em>`,
+			exp:          `Hello, <em id="who">github</em>`,
+			inplace:      true,
+			replaceChild: false,
+		},
+		{
+			id:           "",
+			with:         `<em id="who">github</em>`,
+			exp:          `Hello, <em id="who">github</em>`,
+			inplace:      true,
+			replaceChild: true,
+		},
+		{
+			id:           "",
+			with:         `<em>github</em>`,
+			exp:          `<em id="who">World</em>`,
+			inplace:      true,
+			replaceChild: true,
+		},
+		{
+			id:           "",
+			with:         `<em id="who">github</em>`,
+			exp:          `<em id="who">World</em>`,
+			inplace:      false,
+			replaceChild: false,
+		},
 	}
 	for _, c := range cases {
 		wd, _ := workdir.TempDir()
