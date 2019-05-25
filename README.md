@@ -1,9 +1,7 @@
 [![Build Status](https://travis-ci.org/gregoryv/ud.svg?branch=master)](https://travis-ci.org/gregoryv/ud)
 [![codecov](https://codecov.io/gh/gregoryv/ud/branch/master/graph/badge.svg)](https://codecov.io/gh/gregoryv/ud)
 
-[ud](https://godoc.org/github.com/gregoryv/ud) - Update document
-
-Utility for replacing elements by id within html files.
+[ud](https://godoc.org/github.com/gregoryv/ud) - Utility for replacing elements by id within html files.
 
 ## Quick start
 
