@@ -1,7 +1,9 @@
 package ud
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
@@ -15,6 +17,21 @@ func TestReplace_errors(t *testing.T) {
 	if err == nil {
 		t.Error("should fail when no file found")
 	}
+
+	// package global
+	TempFile = func(string, string) (*os.File, error) {
+		return nil, fmt.Errorf("oups")
+	}
+	wd, _ := workdir.TempDir()
+	defer wd.RemoveAll()
+	wd.WriteFile("index.html", []byte("<html></html>"))
+	stdin = strings.NewReader("aaa")
+	err = Replace(stdin, "a", wd.Join("index.html"), true, false)
+	if err == nil {
+		t.Error("should fail when temporary file cannot be created")
+	}
+	TempFile = ioutil.TempFile
+
 }
 
 func Test_findId(t *testing.T) {
@@ -95,5 +112,23 @@ Hello, <em id="who">World</em>!
 		assert().Contains(got, c.exp)
 		assert().Contains(got, "</body></html>")
 		wd.RemoveAll()
+	}
+}
+
+func TestNewInplaceWriter(t *testing.T) {
+	w, err := NewInplaceWriter("x", ioutil.TempFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	w.Close()
+
+	w, err = NewInplaceWriter("x", func(string, string) (*os.File, error) {
+		return nil, fmt.Errorf("oups")
+	})
+	if err == nil {
+		t.Fatal(err)
+	}
+	if w != nil {
+		w.Close()
 	}
 }
