@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gregoryv/asserter"
 	"github.com/gregoryv/workdir"
 )
 
@@ -51,75 +50,83 @@ func Test_findId(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	content := `<html><head><title></title></head>
-<body><span id="a">
-Hello, <em id="who">World</em>!
-
-<map id="g_all"></map>
-</span></body></html>`
-
 	DefaultOutput = &discard{}
 
 	file := "index.html"
 	cases := []struct {
+		doc          string
 		id           string
 		frag         string
 		exp          string
-		inplace      bool
 		replaceChild bool
 	}{
 		{
+			doc:          `<b><i id="x">a</i></b>`,
 			id:           "",
-			frag:         `<map id="g_all">something</map>`,
-			exp:          `<map id="g_all">something</map>`,
-			inplace:      true,
+			frag:         `<em id="x">A</em>`, // ok id
+			exp:          `<b><em id="x">A</em></b>`,
 			replaceChild: false,
 		},
 		{
-			id:           "a",
-			frag:         "aaa",
-			exp:          "aaa",
-			inplace:      true,
-			replaceChild: true,
-		},
-		{
+			doc:          `<b><i id="x">a</i></b>`,
 			id:           "",
-			frag:         `<em id="who">github</em>`,
-			exp:          `Hello, <em id="who">github</em>`,
-			inplace:      true,
+			frag:         `<i id="X"></i>`, // wrong id
+			exp:          `<b><i id="x">a</i></b>`,
 			replaceChild: false,
 		},
 		{
-			id:           "",
-			frag:         `<em id="who">github</em>`,
-			exp:          `Hello, <em id="who">github</em>`,
-			inplace:      true,
-			replaceChild: true,
-		},
-		{
-			id:           "",
-			frag:         `<em>github</em>`,
-			exp:          `<em id="who">World</em>`,
-			inplace:      true,
-			replaceChild: true,
-		},
-		{
-			id:           "",
-			frag:         `<em id="who">github</em>`,
-			exp:          `<em id="who">World</em>`,
-			inplace:      false,
+			doc:          `<b><i id="x">a</i></b>`,
+			id:           "x",
+			frag:         "",
+			exp:          `<b></b>`,
 			replaceChild: false,
+		},
+		{
+			doc:          `<b><i id="x">a</i></b>`,
+			id:           "", // no id given
+			frag:         "", // no id found
+			exp:          `<b><i id="x">a</i></b>`,
+			replaceChild: false,
+		},
+		{
+			doc:          `<b><i id="x"><span>here</span></i></b>`,
+			id:           "x",
+			frag:         "",
+			exp:          `<b></b>`,
+			replaceChild: false,
+		},
+
+		{
+			doc:          `<b><i id="x">a</i></b>`,
+			id:           "x",
+			frag:         `A`,
+			exp:          `<b><i id="x">A</i></b>`,
+			replaceChild: true,
+		},
+		{
+			doc:          `<b><i id="x">a</i></b>`,
+			id:           "", // empty
+			frag:         `<i id="x">A</i>`,
+			exp:          `<b><i id="x">A</i></b>`,
+			replaceChild: true, // no effect when no id is given
 		},
 	}
 	for _, c := range cases {
 		wd, _ := workdir.TempDir()
-		wd.WriteFile(file, []byte(content))
+		wd.WriteFile(file, []byte(c.doc))
 		frag := strings.NewReader(c.frag)
-		Replace(frag, c.id, wd.Join(file), c.inplace, c.replaceChild)
-		assert := asserter.New(t)
+		Replace(frag, c.id, wd.Join(file), true, c.replaceChild)
 		got, _ := ioutil.ReadFile(wd.Join("index.html"))
-		assert().Contains(got, c.exp)
-		assert().Contains(got, "</body></html>")
+		if string(got) != c.exp {
+			t.Log("doc.:", c.doc)
+			t.Logf("id..: %q, child: %v", c.id, c.replaceChild)
+			t.Log("frag:", c.frag)
+			t.Log("got.:", string(got))
+			t.Log("exp.:", c.exp)
+
+			t.Log()
+			t.Fail()
+		}
 		wd.RemoveAll()
 	}
 }
