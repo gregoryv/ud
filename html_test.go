@@ -30,7 +30,6 @@ func TestReplace_errors(t *testing.T) {
 		t.Error("should fail when temporary file cannot be created")
 	}
 	TempFile = ioutil.TempFile
-
 }
 
 func Test_findId(t *testing.T) {

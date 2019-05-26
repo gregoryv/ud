@@ -17,15 +17,16 @@ func Replace(frag Fragment, id, file string, inplace, child bool) (err error) {
 	if id == "" {
 		return fmt.Errorf("No id specified")
 	}
-	fh, err := os.Open(file)
+	doc, err := os.Open(file)
 	if err != nil {
 		return
 	}
+	defer doc.Close()
 	out, err := getOutput(inplace, file)
 	if err != nil {
 		return
 	}
-	replace(fh, frag, id, out, child)
+	replace(doc, frag, id, out, child)
 	return out.Close()
 }
 
@@ -69,9 +70,9 @@ func (w *InplaceWriter) Close() error {
 	return os.Rename(w.tmp.Name(), w.dest)
 }
 
-func findId(r io.ReadSeeker) string {
-	defer r.Seek(0, 0)
-	z := html.NewTokenizer(r)
+func findId(frag Fragment) string {
+	defer frag.Seek(0, 0) // reset to beginning
+	z := html.NewTokenizer(frag)
 	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
 		for _, attr := range tok.Attr {
@@ -83,7 +84,7 @@ func findId(r io.ReadSeeker) string {
 	return ""
 }
 
-func replace(doc, r io.Reader, id string, w io.Writer, child bool) {
+func replace(doc, frag io.Reader, id string, w io.Writer, child bool) {
 	z := html.NewTokenizer(doc)
 outer:
 	for z.Next(); z.Err() != io.EOF; z.Next() {
@@ -94,11 +95,11 @@ outer:
 					fmt.Fprint(w, tok)
 					z.Next()
 					skip(z)
-					io.Copy(w, r)
+					io.Copy(w, frag)
 					fmt.Fprint(w, "</", tok.Data, ">")
 				} else {
 					skip(z)
-					io.Copy(w, r)
+					io.Copy(w, frag)
 				}
 
 				continue outer
