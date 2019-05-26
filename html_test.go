@@ -61,6 +61,13 @@ func TestReplace(t *testing.T) {
 		replaceChild bool
 	}{
 		{
+			doc:          `<b><i id="x"></i></b>`, // empty start
+			id:           "x",
+			frag:         `content`, // ok id
+			exp:          `<b><i id="x">content</i></b>`,
+			replaceChild: true,
+		},
+		{
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "",
 			frag:         `<em id="x">A</em>`, // ok id
