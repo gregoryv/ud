@@ -118,20 +118,33 @@ Hello, <em id="who">World</em>!
 }
 
 func TestNewInplaceWriter(t *testing.T) {
-	w, err := NewInplaceWriter("x", ioutil.TempFile)
-	if err != nil {
-		t.Fatal(err)
+	cases := []struct {
+		fn  TempFiler
+		exp bool
+	}{
+		{
+			fn:  ioutil.TempFile,
+			exp: true,
+		},
+		{
+			fn: func(string, string) (*os.File, error) {
+				return nil, fmt.Errorf("oups")
+			},
+			exp: false,
+		},
 	}
-	w.Close()
+	for _, c := range cases {
+		fh, _ := ioutil.TempFile("", "x")
+		fh.Close()
 
-	w, err = NewInplaceWriter("x", func(string, string) (*os.File, error) {
-		return nil, fmt.Errorf("oups")
-	})
-	if err == nil {
-		t.Fatal(err)
-	}
-	if w != nil {
-		w.Close()
+		w, err := NewInplaceWriter(fh.Name(), c.fn)
+		if c.exp != (err == nil) {
+			t.Error(err)
+		}
+		if w != nil {
+			w.Close()
+		}
+		os.RemoveAll(fh.Name())
 	}
 }
 

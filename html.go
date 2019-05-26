@@ -9,11 +9,10 @@ import (
 	"golang.org/x/net/html"
 )
 
-func Replace(r io.ReadSeeker, id, file string,
-	inplace, replaceChild bool) (err error) {
+func Replace(frag Fragment, id, file string, inplace, child bool) (err error) {
 	if id == "" {
-		id = findId(r)
-		replaceChild = false // cannot be used when id is not given
+		id = findId(frag)
+		child = false // cannot be used when id is not given
 	}
 	if id == "" {
 		return fmt.Errorf("No id specified")
@@ -26,12 +25,16 @@ func Replace(r io.ReadSeeker, id, file string,
 	if err != nil {
 		return
 	}
-	replace(fh, r, id, out, replaceChild)
+	replace(fh, frag, id, out, child)
 	return out.Close()
 }
 
+type Fragment interface {
+	io.ReadSeeker
+}
+
 // Used to create temporary files for writing inplace
-var TempFile = ioutil.TempFile
+var TempFile TempFiler = ioutil.TempFile
 var DefaultOutput io.WriteCloser = os.Stdout
 
 // getOutput returns writer, caller must call Close when done.
@@ -80,15 +83,14 @@ func findId(r io.ReadSeeker) string {
 	return ""
 }
 
-func replace(doc, r io.Reader, id string, w io.Writer,
-	replaceChild bool) {
+func replace(doc, r io.Reader, id string, w io.Writer, child bool) {
 	z := html.NewTokenizer(doc)
 outer:
 	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
 		for _, attr := range tok.Attr {
 			if idMatch(id, attr) {
-				if replaceChild {
+				if child {
 					fmt.Fprint(w, tok)
 					z.Next()
 					skip(z)
