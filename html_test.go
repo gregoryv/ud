@@ -19,9 +19,8 @@ func TestReplace_errors(t *testing.T) {
 	}
 
 	// package global
-	TempFile = func(string, string) (*os.File, error) {
-		return nil, fmt.Errorf("oups")
-	}
+	TempFile = badTemper
+
 	wd, _ := workdir.TempDir()
 	defer wd.RemoveAll()
 	wd.WriteFile("index.html", []byte("<html></html>"))
@@ -127,9 +126,7 @@ func TestNewInplaceWriter(t *testing.T) {
 			exp: true,
 		},
 		{
-			fn: func(string, string) (*os.File, error) {
-				return nil, fmt.Errorf("oups")
-			},
+			fn:  badTemper,
 			exp: false,
 		},
 	}
@@ -153,3 +150,8 @@ type discard struct{}
 func (discard) Close() error { return nil }
 
 func (discard) Write(b []byte) (int, error) { return len(b), nil }
+
+// badTemper fails to create a temporary file, love the name :-)
+func badTemper(string, string) (*os.File, error) {
+	return nil, fmt.Errorf("oups")
+}
