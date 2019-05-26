@@ -160,6 +160,13 @@ func TestNewInplaceWriter(t *testing.T) {
 	}
 }
 
+func Test_getOutput(t *testing.T) {
+	got, _ := getOutput(false, "")
+	if got != DefaultOutput {
+		t.Fail()
+	}
+}
+
 type discard struct{}
 
 func (discard) Close() error { return nil }
