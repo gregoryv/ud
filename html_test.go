@@ -54,6 +54,8 @@ func TestReplace(t *testing.T) {
 	content := `<html><head><title></title></head>
 <body><span id="a">
 Hello, <em id="who">World</em>!
+
+<map id="g_all"></map>
 </span></body></html>`
 
 	DefaultOutput = &discard{}
@@ -61,42 +63,49 @@ Hello, <em id="who">World</em>!
 	file := "index.html"
 	cases := []struct {
 		id           string
-		with         string
+		frag         string
 		exp          string
 		inplace      bool
 		replaceChild bool
 	}{
 		{
+			id:           "",
+			frag:         `<map id="g_all">something</map>`,
+			exp:          `<map id="g_all">something</map>`,
+			inplace:      true,
+			replaceChild: false,
+		},
+		{
 			id:           "a",
-			with:         "aaa",
+			frag:         "aaa",
 			exp:          "aaa",
 			inplace:      true,
 			replaceChild: true,
 		},
 		{
 			id:           "",
-			with:         `<em id="who">github</em>`,
+			frag:         `<em id="who">github</em>`,
 			exp:          `Hello, <em id="who">github</em>`,
 			inplace:      true,
 			replaceChild: false,
 		},
 		{
 			id:           "",
-			with:         `<em id="who">github</em>`,
+			frag:         `<em id="who">github</em>`,
 			exp:          `Hello, <em id="who">github</em>`,
 			inplace:      true,
 			replaceChild: true,
 		},
 		{
 			id:           "",
-			with:         `<em>github</em>`,
+			frag:         `<em>github</em>`,
 			exp:          `<em id="who">World</em>`,
 			inplace:      true,
 			replaceChild: true,
 		},
 		{
 			id:           "",
-			with:         `<em id="who">github</em>`,
+			frag:         `<em id="who">github</em>`,
 			exp:          `<em id="who">World</em>`,
 			inplace:      false,
 			replaceChild: false,
@@ -105,8 +114,8 @@ Hello, <em id="who">World</em>!
 	for _, c := range cases {
 		wd, _ := workdir.TempDir()
 		wd.WriteFile(file, []byte(content))
-		stdin := strings.NewReader(c.with)
-		Replace(stdin, c.id, wd.Join(file), c.inplace, c.replaceChild)
+		frag := strings.NewReader(c.frag)
+		Replace(frag, c.id, wd.Join(file), c.inplace, c.replaceChild)
 		assert := asserter.New(t)
 		got, _ := ioutil.ReadFile(wd.Join("index.html"))
 		assert().Contains(got, c.exp)
