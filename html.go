@@ -67,6 +67,7 @@ func (w *InplaceWriter) Write(b []byte) (int, error) {
 
 func (w *InplaceWriter) Close() error {
 	w.tmp.Close()
+	os.Chmod(w.tmp.Name(), 0644)
 	return os.Rename(w.tmp.Name(), w.dest)
 }
 
