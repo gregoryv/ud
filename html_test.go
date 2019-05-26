@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/gregoryv/workdir"
+	"golang.org/x/net/html"
 )
 
 func TestReplace_errors(t *testing.T) {
@@ -128,8 +129,8 @@ func TestReplace(t *testing.T) {
 			t.Log("doc.:", c.doc)
 			t.Logf("id..: %q, child: %v", c.id, c.replaceChild)
 			t.Log("frag:", c.frag)
-			t.Log("got.:", string(got))
 			t.Log("exp.:", c.exp)
+			t.Log("got.:", string(got))
 
 			t.Log()
 			t.Fail()
@@ -138,6 +139,28 @@ func TestReplace(t *testing.T) {
 	}
 }
 
+func Test_skip(t *testing.T) {
+	cases := []struct {
+		part string
+		exp  string
+	}{
+		{
+			part: `<i></i></b>`,
+			exp:  `b`,
+		},
+		{
+			part: `</b>`,
+			exp:  `b`,
+		},
+	}
+	for _, c := range cases {
+		z := html.NewTokenizer(strings.NewReader(c.part))
+		got := skip(z)
+		if got.Data != c.exp {
+			t.Error(got)
+		}
+	}
+}
 func TestNewInplaceWriter(t *testing.T) {
 	cases := []struct {
 		fn  TempFiler

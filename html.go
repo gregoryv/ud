@@ -93,8 +93,10 @@ outer:
 			if idMatch(id, attr) {
 				if child {
 					fmt.Fprint(w, tok)
-					z.Next()
-					skip(z)
+					tt := z.Next()
+					if tt != html.EndTagToken {
+						skip(z)
+					}
 					io.Copy(w, frag)
 					fmt.Fprint(w, "</", tok.Data, ">")
 				} else {
@@ -113,7 +115,7 @@ func idMatch(id string, attr html.Attribute) bool {
 	return attr.Key == "id" && attr.Val == id
 }
 
-func skip(z *html.Tokenizer) {
+func skip(z *html.Tokenizer) html.Token {
 	depth := 1 // when 0 we stop
 	for {
 		tt := z.Next()
@@ -124,7 +126,7 @@ func skip(z *html.Tokenizer) {
 			depth--
 		}
 		if depth == 0 {
-			break
+			return z.Token()
 		}
 	}
 }
