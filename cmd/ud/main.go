@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/gregoryv/ud"
@@ -15,7 +17,18 @@ func main() {
 	replaceChild := flag.Bool("c", false, "replace content not element")
 	flag.Parse()
 
-	err := ud.Replace(os.Stdin, *id, *file, *inplace, *replaceChild)
+	var frag ud.Fragment = os.Stdin
+	if *id == "" {
+		// If no Id is given the frag must be a working ReadSeeker
+		// os.Stdin is Not
+		stdin, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		frag = bytes.NewReader(stdin)
+	}
+	err := ud.Replace(frag, *id, *file, *inplace, *replaceChild)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
