@@ -29,3 +29,5 @@ The primary reason for this tool was to simply generate and update
 image maps within html when working with graphviz documents
 
     dot -Tcmapx somegraph.dot | ud -w -html index.html
+
+![](illustration.gv.svg)

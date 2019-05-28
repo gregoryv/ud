@@ -1,0 +1,17 @@
+graph g_boxes {
+	graph[fontname="'Source Sans Pro', sans-serif", fontsize=12.0];
+	node[shape=box, fontname="'Source Sans Pro', sans-serif", fontsize=10.0,
+	     color=lightgray, style=filled, fillcolor=white];
+	edge [color=lightgray]
+	splines=line;
+
+	a [label="header"]
+	b [label="old content", fontcolor="lightgray", style=dashed]
+	c [label="footer"]
+	d [shape=cds, height=0.65, label="New content"]
+
+	a -- b -- c
+	d -- b
+
+	{rank=same; d,b}
+}
