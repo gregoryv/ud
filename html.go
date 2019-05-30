@@ -1,79 +1,37 @@
 package ud
 
 import (
+	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"os"
 
 	"golang.org/x/net/html"
 )
 
-func Replace(frag Fragment, id, file string, inplace, child bool) (err error) {
-	if id == "" {
-		id = findId(frag)
-		child = false // cannot be used when id is not given
+// HtmlRewriter replaces html tags or their content by id.
+type HtmlRewriter struct {
+	id       string
+	child    bool
+	fragment []byte
+}
+
+// NewHtmlRewriter returns a html rewriter. The rewriter can be used
+// multiple times.
+func NewHtmlRewriter(id string, child bool, fragment []byte) *HtmlRewriter {
+	hr := &HtmlRewriter{
+		id:       id,
+		child:    child,
+		fragment: fragment,
 	}
-	if id == "" {
-		return fmt.Errorf("No id specified")
+	if hr.id == "" {
+		hr.id = findId(fragment)
+		hr.child = false // cannot be used when id is not given
 	}
-	doc, err := os.Open(file)
-	if err != nil {
-		return
-	}
-	defer doc.Close()
-	out, err := getOutput(inplace, file)
-	if err != nil {
-		return
-	}
-	replace(doc, frag, id, out, child)
-	return out.Close()
+	return hr
 }
 
-type Fragment interface {
-	io.ReadSeeker
-}
-
-// Used to create temporary files for writing inplace
-var TempFile TempFiler = ioutil.TempFile
-var DefaultOutput io.WriteCloser = os.Stdout
-
-// getOutput returns writer, caller must call Close when done.
-func getOutput(inplace bool, file string) (io.WriteCloser, error) {
-	if inplace {
-		return NewInplaceWriter(file, TempFile)
-	}
-	return DefaultOutput, nil
-}
-
-type InplaceWriter struct {
-	tmp  *os.File
-	dest string
-}
-
-type TempFiler func(string, string) (*os.File, error)
-
-func NewInplaceWriter(file string, newTemp TempFiler) (*InplaceWriter, error) {
-	tmp, err := newTemp("", "ud")
-	if err != nil {
-		return nil, err
-	}
-	return &InplaceWriter{tmp, file}, nil
-}
-
-func (w *InplaceWriter) Write(b []byte) (int, error) {
-	return w.tmp.Write(b)
-}
-
-func (w *InplaceWriter) Close() error {
-	w.tmp.Close()
-	os.Chmod(w.tmp.Name(), 0644)
-	return os.Rename(w.tmp.Name(), w.dest)
-}
-
-func findId(frag Fragment) string {
-	defer frag.Seek(0, 0) // reset to beginning
-	z := html.NewTokenizer(frag)
+func findId(frag []byte) string {
+	z := html.NewTokenizer(bytes.NewReader(frag))
 	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
 		for _, attr := range tok.Attr {
@@ -85,32 +43,36 @@ func findId(frag Fragment) string {
 	return ""
 }
 
-func replace(doc, frag io.Reader, id string, w io.Writer, child bool) {
-	z := html.NewTokenizer(doc)
+// Rewrite the incoming stream on r and write it to w.
+func (hr *HtmlRewriter) Rewrite(w io.Writer, r io.Reader) error {
+	z := html.NewTokenizer(r)
 outer:
 	for z.Next(); z.Err() != io.EOF; z.Next() {
 		tok := z.Token()
-		for _, attr := range tok.Attr {
-			if idMatch(id, attr) {
-				if child {
-					fmt.Fprint(w, tok)
-					skipChild(z)
-					io.Copy(w, frag)
-					fmt.Fprint(w, "</", tok.Data, ">")
-				} else {
-					skip(z)
-					io.Copy(w, frag)
-				}
-
-				continue outer
+		if idMatch(hr.id, tok) {
+			if hr.child {
+				fmt.Fprint(w, tok)
+				skipChild(z)
+				w.Write(hr.fragment)
+				fmt.Fprint(w, "</", tok.Data, ">")
+			} else {
+				skip(z)
+				w.Write(hr.fragment)
 			}
+			continue outer
 		}
 		fmt.Fprint(w, tok)
 	}
+	return nil
 }
 
-func idMatch(id string, attr html.Attribute) bool {
-	return attr.Key == "id" && attr.Val == id
+func idMatch(id string, tok html.Token) bool {
+	for _, attr := range tok.Attr {
+		if attr.Key == "id" && attr.Val == id {
+			return true
+		}
+	}
+	return false
 }
 
 func skipChild(z *html.Tokenizer) html.Token {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
@@ -17,17 +18,29 @@ func main() {
 	replaceChild := flag.Bool("c", false, "replace content not element")
 	flag.Parse()
 
-	// os.Stdin is not a working ReadSeaker
-	stdin, err := ioutil.ReadAll(os.Stdin)
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-	// When piping a newline is often appended, clean it
-	stdin = bytes.TrimSpace(stdin)
-	var frag = bytes.NewReader(stdin)
+	// Fragments are usually small
+	frag, err := ioutil.ReadAll(os.Stdin)
+	fatal(err)
 
-	err = ud.Replace(frag, *id, *file, *inplace, *replaceChild)
+	// When piping a newline is often appended, clean it
+	frag = bytes.TrimSpace(frag)
+
+	var w io.WriteCloser = os.Stdout
+	if *inplace {
+		w, err = NewInplaceWriter(*file, TempFile)
+		fatal(err)
+	}
+	defer w.Close()
+
+	hr := ud.NewHtmlRewriter(*id, *replaceChild, frag)
+	r, err := os.Open(*file)
+	fatal(err)
+
+	err = hr.Rewrite(w, r)
+	fatal(err)
+}
+
+func fatal(err error) {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

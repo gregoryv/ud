@@ -1,36 +1,13 @@
 package ud
 
 import (
-	"fmt"
-	"io/ioutil"
+	"bytes"
 	"os"
 	"strings"
 	"testing"
 
-	"github.com/gregoryv/workdir"
 	"golang.org/x/net/html"
 )
-
-func TestReplace_errors(t *testing.T) {
-	stdin := strings.NewReader("aaa")
-	err := Replace(stdin, "a", "nosuchfile.html", true, true)
-	if err == nil {
-		t.Error("should fail when no file found")
-	}
-
-	// package global
-	TempFile = badTemper
-
-	wd, _ := workdir.TempDir()
-	defer wd.RemoveAll()
-	wd.WriteFile("index.html", []byte("<html></html>"))
-	stdin = strings.NewReader("aaa")
-	err = Replace(stdin, "a", wd.Join("index.html"), true, false)
-	if err == nil {
-		t.Error("should fail when temporary file cannot be created")
-	}
-	TempFile = ioutil.TempFile
-}
 
 func Test_findId(t *testing.T) {
 	cases := []struct {
@@ -41,8 +18,7 @@ func Test_findId(t *testing.T) {
 		{`<em>github</em>`, ""},
 	}
 	for _, c := range cases {
-		r := strings.NewReader(c.in)
-		got := findId(r)
+		got := findId([]byte(c.in))
 		if got != c.exp {
 			t.Error(got, c.exp)
 		}
@@ -51,9 +27,6 @@ func Test_findId(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	DefaultOutput = &discard{}
-
-	file := "index.html"
 	cases := []struct {
 		doc          string
 		id           string
@@ -90,20 +63,12 @@ func TestReplace(t *testing.T) {
 			replaceChild: false,
 		},
 		{
-			doc:          `<b><i id="x">a</i></b>`,
-			id:           "", // no id given
-			frag:         "", // no id found
-			exp:          `<b><i id="x">a</i></b>`,
-			replaceChild: false,
-		},
-		{
 			doc:          `<b><i id="x"><span>here</span></i></b>`,
 			id:           "x",
 			frag:         "",
 			exp:          `<b></b>`,
 			replaceChild: false,
 		},
-
 		{
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "x",
@@ -120,22 +85,20 @@ func TestReplace(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		wd, _ := workdir.TempDir()
-		wd.WriteFile(file, []byte(c.doc))
-		frag := strings.NewReader(c.frag)
-		Replace(frag, c.id, wd.Join(file), true, c.replaceChild)
-		got, _ := ioutil.ReadFile(wd.Join("index.html"))
-		if string(got) != c.exp {
+		w := bytes.NewBufferString("")
+		hr := NewHtmlRewriter(c.id, c.replaceChild, []byte(c.frag))
+		hr.Rewrite(w, strings.NewReader(c.doc))
+		got := w.String()
+		if got != c.exp {
 			t.Log("doc.:", c.doc)
 			t.Logf("id..: %q, child: %v", c.id, c.replaceChild)
 			t.Log("frag:", c.frag)
 			t.Log("exp.:", c.exp)
-			t.Log("got.:", string(got))
+			t.Log("got.:", got)
 
 			t.Log()
 			t.Fail()
 		}
-		wd.RemoveAll()
 	}
 }
 
@@ -161,49 +124,43 @@ func Test_skip(t *testing.T) {
 		}
 	}
 }
-func TestNewInplaceWriter(t *testing.T) {
-	cases := []struct {
-		fn  TempFiler
-		exp bool
-	}{
-		{
-			fn:  ioutil.TempFile,
-			exp: true,
-		},
-		{
-			fn:  badTemper,
-			exp: false,
-		},
-	}
-	for _, c := range cases {
-		fh, _ := ioutil.TempFile("", "x")
-		fh.Close()
 
-		w, err := NewInplaceWriter(fh.Name(), c.fn)
-		if c.exp != (err == nil) {
-			t.Error(err)
-		}
-		if w != nil {
-			w.Close()
-		}
-		os.RemoveAll(fh.Name())
-	}
+func ExampleHtmlRewriter_Rewrite_element() {
+	r := strings.NewReader(`
+<html>
+ <body>
+  <h1>Title</h1>
+  <div id="ABC">Old content</div>
+ </body>
+</html>
+`)
+	hr := NewHtmlRewriter("ABC", false, []byte(`new stuff`))
+	hr.Rewrite(os.Stdout, r)
+	// output:
+	// <html>
+	//  <body>
+	//   <h1>Title</h1>
+	//   new stuff
+	//  </body>
+	// </html>
 }
 
-func Test_getOutput(t *testing.T) {
-	got, _ := getOutput(false, "")
-	if got != DefaultOutput {
-		t.Fail()
-	}
-}
-
-type discard struct{}
-
-func (discard) Close() error { return nil }
-
-func (discard) Write(b []byte) (int, error) { return len(b), nil }
-
-// badTemper fails to create a temporary file, love the name :-)
-func badTemper(string, string) (*os.File, error) {
-	return nil, fmt.Errorf("oups")
+func ExampleHtmlRewriter_Rewrite_child() {
+	r := strings.NewReader(`
+<html>
+ <body>
+  <h1>Title</h1>
+  <div id="ABC">Old content</div>
+ </body>
+</html>
+`)
+	hr := NewHtmlRewriter("ABC", true, []byte(`new stuff`))
+	hr.Rewrite(os.Stdout, r)
+	// output:
+	// <html>
+	//  <body>
+	//   <h1>Title</h1>
+	//   <div id="ABC">new stuff</div>
+	//  </body>
+	// </html>
 }
