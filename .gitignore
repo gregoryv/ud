@@ -10,3 +10,5 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+cmd/ud/ud
+cmd/ud/ud.exe
