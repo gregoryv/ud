@@ -5,6 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"testing"
+
+	"github.com/gregoryv/workdir"
 )
 
 var gobin = "go"
@@ -18,4 +21,34 @@ func init() {
 		fmt.Println("Failed to build cmd/ud:", string(out))
 		os.Exit(1)
 	}
+}
+
+func TestBasicOperation(t *testing.T) {
+	wd, _ := workdir.TempDir()
+
+	htmlFile := "index.html"
+	content := []byte(`<html><body><h1 id="x">BIG</h1></body></html>`)
+	wd.WriteFile(htmlFile, content)
+
+	fragment := []byte(`<h2 id="x">small</h2>`)
+	fragFile := "fragment.html"
+	wd.WriteFile(fragFile, fragment)
+
+	Main("", wd.Join(htmlFile), wd.Join(fragFile), true, false,
+		func(err error) {
+			if err != nil {
+				t.Error(err)
+			}
+		},
+	)
+	newContent, err := wd.Load(htmlFile)
+	if err != nil {
+		t.Error(err)
+	}
+	got := string(newContent)
+	exp := `<html><body><h2 id="x">small</h2></body></html>`
+	if got != exp {
+		t.Error(got)
+	}
+	wd.RemoveAll()
 }
