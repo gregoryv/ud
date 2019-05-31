@@ -15,11 +15,21 @@ func main() {
 	id := flag.String("i", "", "Id of element")
 	file := flag.String("html", "", "html file to modify")
 	inplace := flag.Bool("w", false, "writes to file inplace")
+	fragFile := flag.String("f", "", "fragment to use")
 	replaceChild := flag.Bool("c", false, "replace content not element")
 	flag.Parse()
 
-	// Fragments are usually small
-	frag, err := ioutil.ReadAll(os.Stdin)
+	var (
+		err    error
+		frag   []byte    // Fragments are usually small
+		fragIn io.Reader = os.Stdin
+	)
+
+	if *fragFile != "" {
+		fragIn, err = os.Open(*fragFile)
+		fatal(err)
+	}
+	frag, err = ioutil.ReadAll(fragIn)
 	fatal(err)
 
 	// When piping a newline is often appended, clean it
