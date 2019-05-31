@@ -23,11 +23,11 @@ func Test_findId(t *testing.T) {
 			t.Error(got, c.exp)
 		}
 	}
-
 }
 
 func TestReplace(t *testing.T) {
 	cases := []struct {
+		desc         string
 		doc          string
 		id           string
 		frag         string
@@ -35,6 +35,7 @@ func TestReplace(t *testing.T) {
 		replaceChild bool
 	}{
 		{
+			desc:         "replace element by given id when element is empty",
 			doc:          `<b><i id="x"></i></b>`, // empty start
 			id:           "x",
 			frag:         `content`, // ok id
@@ -42,6 +43,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: true,
 		},
 		{
+			desc:         "element when id is found in fragment",
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "",
 			frag:         `<em id="x">A</em>`, // ok id
@@ -49,6 +51,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: false,
 		},
 		{
+			desc:         "do nothing if no matching id is found",
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "",
 			frag:         `<i id="X"></i>`, // wrong id
@@ -56,6 +59,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: false,
 		},
 		{
+			desc:         "remove element when fragment is empty",
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "x",
 			frag:         "",
@@ -63,6 +67,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: false,
 		},
 		{
+			desc:         "remove all sub elements when fragment is empty",
 			doc:          `<b><i id="x"><span>here</span></i></b>`,
 			id:           "x",
 			frag:         "",
@@ -70,6 +75,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: false,
 		},
 		{
+			desc:         "child when id given",
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "x",
 			frag:         `A`,
@@ -77,6 +83,7 @@ func TestReplace(t *testing.T) {
 			replaceChild: true,
 		},
 		{
+			desc:         "Empty id cannot replace child",
 			doc:          `<b><i id="x">a</i></b>`,
 			id:           "", // empty
 			frag:         `<i id="x">A</i>`,
@@ -85,20 +92,21 @@ func TestReplace(t *testing.T) {
 		},
 	}
 	for _, c := range cases {
-		w := bytes.NewBufferString("")
-		hr := NewHtmlRewriter(c.id, c.replaceChild, []byte(c.frag))
-		hr.Rewrite(w, strings.NewReader(c.doc))
-		got := w.String()
-		if got != c.exp {
-			t.Log("doc.:", c.doc)
-			t.Logf("id..: %q, child: %v", c.id, c.replaceChild)
-			t.Log("frag:", c.frag)
-			t.Log("exp.:", c.exp)
-			t.Log("got.:", got)
-
-			t.Log()
-			t.Fail()
-		}
+		t.Run(c.desc, func(t *testing.T) {
+			w := bytes.NewBufferString("")
+			hr := NewHtmlRewriter(c.id, c.replaceChild, []byte(c.frag))
+			hr.Rewrite(w, strings.NewReader(c.doc))
+			got := w.String()
+			if got != c.exp {
+				t.Logf(`
+Document to modify         %s
+given id                   %q
+The fragment               %s
+Expected to see            %s
+but got                    %s`, c.doc, c.id, c.frag, c.exp, got)
+				t.Fail()
+			}
+		})
 	}
 }
 
