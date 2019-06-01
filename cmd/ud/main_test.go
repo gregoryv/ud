@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/gregoryv/golden"
 	"github.com/gregoryv/workdir"
 )
 
@@ -41,14 +42,12 @@ func TestBasicOperation(t *testing.T) {
 			}
 		},
 	)
+
 	newContent, err := wd.Load(htmlFile)
 	if err != nil {
 		t.Error(err)
 	}
 	got := string(newContent)
-	exp := `<html><body><h2 id="x">small</h2></body></html>`
-	if got != exp {
-		t.Error(got)
-	}
+	golden.Assert(t, got)
 	wd.RemoveAll()
 }
