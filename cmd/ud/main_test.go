@@ -24,16 +24,27 @@ func init() {
 	}
 }
 
-func TestBasicOperation(t *testing.T) {
+func TestCommand(t *testing.T) {
 	wd, _ := workdir.TempDir()
+	defer wd.RemoveAll()
+	htmlFile, fragFile := setupFileAndFragment(wd)
 
-	htmlFile := "index.html"
-	content := []byte(`<html><body><h1 id="x">BIG</h1></body></html>`)
-	wd.WriteFile(htmlFile, content)
+	cmd := exec.Command("./ud", "-w", "-f", wd.Join(fragFile),
+		"-html", wd.Join(htmlFile))
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Log(out)
+		t.Error(err)
+	}
 
-	fragment := []byte(`<h2 id="x">small</h2>`)
-	fragFile := "fragment.html"
-	wd.WriteFile(fragFile, fragment)
+	got, _ := wd.Load(htmlFile)
+	golden.Assert(t, string(got))
+}
+
+func TestMain(t *testing.T) {
+	wd, _ := workdir.TempDir()
+	defer wd.RemoveAll()
+	htmlFile, fragFile := setupFileAndFragment(wd)
 
 	Main("", wd.Join(htmlFile), wd.Join(fragFile), true, false,
 		func(err error) {
@@ -43,11 +54,17 @@ func TestBasicOperation(t *testing.T) {
 		},
 	)
 
-	newContent, err := wd.Load(htmlFile)
-	if err != nil {
-		t.Error(err)
-	}
-	got := string(newContent)
-	golden.Assert(t, got)
-	wd.RemoveAll()
+	got, _ := wd.Load(htmlFile)
+	golden.Assert(t, string(got))
+}
+
+func setupFileAndFragment(wd workdir.WorkDir) (htmlFile, fragFile string) {
+	htmlFile = "index.html"
+	content := []byte(`<html><body><h1 id="x">BIG</h1></body></html>`)
+	wd.WriteFile(htmlFile, content)
+
+	fragment := []byte(`<h2 id="x">small</h2>`)
+	fragFile = "fragment.html"
+	wd.WriteFile(fragFile, fragment)
+	return
 }
