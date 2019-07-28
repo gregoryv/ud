@@ -8,55 +8,88 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/gregoryv/stamp"
 	"github.com/gregoryv/ud"
 )
 
+//go:generate stamp -clfile ../../CHANGELOG.md -go build_stamp.go
 func main() {
+	stamp.InitFlags()
 	id := flag.String("i", "", "Id of element")
 	file := flag.String("html", "", "html file to modify")
 	inplace := flag.Bool("w", false, "writes to file inplace")
 	fragFile := flag.String("f", "", "fragment to use")
 	child := flag.Bool("c", false, "replace content not element")
 	flag.Parse()
+	stamp.AsFlagged()
 
-	Main(*id, *file, *fragFile, *inplace, *child, fatal)
+	err := Main(*id, *file, *fragFile, *inplace, *child)
+	logError(err)
+	os.Exit(exitCode(err))
 }
 
-func Main(id, file, fragFile string, inplace, child bool, handle func(error)) {
-	var (
-		err    error
-		frag   []byte    // Fragments are usually small
-		fragIn io.Reader = os.Stdin
-	)
-
-	if fragFile != "" {
-		fragIn, err = os.Open(fragFile)
-		handle(err)
+func Main(id, file, fragFile string, inplace, child bool) error {
+	frag, err := readFragment(fragFile)
+	if err != nil {
+		return err
 	}
-	frag, err = ioutil.ReadAll(fragIn)
-	handle(err)
 
 	// When piping a newline is often appended, clean it
 	frag = bytes.TrimSpace(frag)
-
-	var w io.WriteCloser = os.Stdout
-	if inplace {
-		w, err = NewInplaceWriter(file, TempFile)
-		handle(err)
+	w, err := newWriteCloser(inplace, file)
+	if err != nil {
+		return err
 	}
 	defer w.Close()
 
 	hr := ud.NewHtmlRewriter(id, child, frag)
 	r, err := os.Open(file)
-	handle(err)
+	if err != nil {
+		return err
+	}
 
 	err = hr.Rewrite(w, r)
-	handle(err)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
-func fatal(err error) {
+func newWriteCloser(inplace bool, file string) (io.WriteCloser, error) {
+	if inplace {
+		return NewInplaceWriter(file, TempFile)
+	}
+	return os.Stdout, nil
+}
+
+func readFragment(filename string) ([]byte, error) {
+	if filename == "" {
+		return ioutil.ReadAll(os.Stdin)
+	}
+	fh, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer fh.Close()
+	return ioutil.ReadAll(fh)
+}
+
+func logError(err error) {
 	if err != nil {
 		fmt.Println(err)
-		os.Exit(1)
 	}
 }
+
+func exitCode(err error) ExitCode {
+	if err != nil {
+		return ExitFail
+	}
+	return ExitOk
+}
+
+type ExitCode = int
+
+const (
+	ExitOk ExitCode = iota
+	ExitFail
+)

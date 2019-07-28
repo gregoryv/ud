@@ -46,13 +46,7 @@ func TestMain(t *testing.T) {
 	defer wd.RemoveAll()
 	htmlFile, fragFile := setupFileAndFragment(wd)
 
-	Main("", wd.Join(htmlFile), wd.Join(fragFile), true, false,
-		func(err error) {
-			if err != nil {
-				t.Error(err)
-			}
-		},
-	)
+	Main("", wd.Join(htmlFile), wd.Join(fragFile), true, false)
 
 	got, _ := wd.Load(htmlFile)
 	golden.Assert(t, string(got))

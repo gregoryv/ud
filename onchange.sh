@@ -11,6 +11,8 @@ case $extension in
         gofmt -w $path
         ;;
 esac
+go generate ./...
 go test -cover ./cmd/ud/
 go test -coverprofile /tmp/c.out .
 uncover /tmp/c.out
+go install ./...
