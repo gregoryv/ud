@@ -13,3 +13,4 @@
 cmd/ud/ud
 cmd/ud/ud.exe
 build_stamp.go
+publish.sh
