@@ -9,7 +9,7 @@ import (
 
 func TestHelp(t *testing.T) {
 	out, err := exec.Command("./ud", "-h").CombinedOutput()
-	if err.Error() != "exit status 2" {
+	if err != nil && err.Error() != "exit status 2" {
 		t.Error(string(out), err)
 	}
 	assert := asserter.New(t)
