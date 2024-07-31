@@ -14,7 +14,7 @@ import (
 
 //go:generate stamp -clfile ../../CHANGELOG.md -go build_stamp.go
 func main() {
-	stamp.InitFlags()
+	stamp.InitFlags() // todo stop using stamp to fix -v option
 	id := flag.String("i", "", "Id of element")
 	file := flag.String("html", "", "html file to modify")
 	inplace := flag.Bool("w", false, "writes to file inplace")
