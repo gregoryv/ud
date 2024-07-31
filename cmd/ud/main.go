@@ -40,7 +40,6 @@ func Main(id, file, fragFile string, inplace, child bool) error {
 	if err != nil {
 		return err
 	}
-	defer w.Close()
 
 	hr := ud.NewHtmlRewriter(id, child, frag)
 	r, err := os.Open(file)
@@ -52,7 +51,7 @@ func Main(id, file, fragFile string, inplace, child bool) error {
 	if err != nil {
 		return err
 	}
-	return nil
+	return w.Close()
 }
 
 func newWriteCloser(inplace bool, file string) (io.WriteCloser, error) {
