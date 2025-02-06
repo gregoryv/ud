@@ -8,20 +8,28 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/gregoryv/stamp"
 	"github.com/gregoryv/ud"
 )
 
 //go:generate stamp -clfile ../../CHANGELOG.md -go build_stamp.go
 func main() {
-	stamp.InitFlags() // todo stop using stamp to fix -v option
 	id := flag.String("i", "", "Id of element")
 	file := flag.String("html", "", "html file to modify")
 	inplace := flag.Bool("w", false, "writes to file inplace")
 	fragFile := flag.String("f", "", "fragment to use")
 	child := flag.Bool("c", false, "replace content not element")
+	v := flag.Bool("v", false, "Print version and exit")
+	vv := flag.Bool("vv", false, "Print version with details and exit")
 	flag.Parse()
-	stamp.AsFlagged()
+
+	if *v {
+		fmt.Println(ud.Version())
+		os.Exit(0)
+	}
+	if *vv {
+		fmt.Printf("%s-%s\n", ud.Version(), ud.Revision())
+		os.Exit(0)
+	}
 
 	err := Main(*id, *file, *fragFile, *inplace, *child)
 	logError(err)
@@ -29,6 +37,7 @@ func main() {
 }
 
 func Main(id, file, fragFile string, inplace, child bool) error {
+
 	frag, err := readFragment(fragFile)
 	if err != nil {
 		return err
